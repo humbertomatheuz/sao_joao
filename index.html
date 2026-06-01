@@ -45,29 +45,32 @@
     <!-- Container App Canvas (PC e Mobile) -->
     <div class="w-full max-w-md bg-stone-50 flex flex-col min-h-screen md:min-h-[92vh] md:my-6 md:rounded-3xl md:shadow-2xl md:border md:border-stone-200 overflow-hidden">
 
-        <!-- Cabeçalho Fixo -->
-        <header class="sticky top-0 z-50 bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-md px-4 py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-black tracking-tight flex items-center gap-1.5 drop-shadow-sm">
-                    🌽 Nosso São João 🔥
-                </h1>
-                <p class="text-xs text-amber-100 font-medium tracking-wide uppercase">Programação de Bolso</p>
+        <!-- Cabeçalho Fixo com Carrossel de Datas -->
+        <header class="sticky top-0 z-50 bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-md">
+            <div class="px-4 py-4 flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight flex items-center gap-1.5 drop-shadow-sm">
+                        🌽 Nosso São João 🔥
+                    </h1>
+                    <p class="text-xs text-amber-100 font-medium tracking-wide uppercase">Programação de Bolso</p>
+                </div>
+                <div id="badge-total" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300">
+                    0 shows
+                </div>
             </div>
-            <div id="badge-total" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300">
-                0 shows
+
+            <!-- Filtros por Data (Carrossel Horizontal) -->
+            <div class="bg-orange-900/20 border-t border-white/10 px-4 py-2.5">
+                <div id="date-tabs" class="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
+                    <button onclick="selectDateTab('', this)" class="date-tab bg-white text-orange-900 text-xs font-bold px-4 py-2 rounded-full shadow-sm shrink-0 transition-all">
+                        📅 Todos os Dias
+                    </button>
+                </div>
             </div>
         </header>
 
-        <!-- Filtros na Vertical (Arranged stacked vertically) -->
-        <section class="bg-white border-b border-stone-200/80 p-4 sticky top-[72px] z-40 shadow-sm flex flex-col gap-3">
-            <!-- Filtro de Data -->
-            <div class="relative">
-                <label for="filter-date" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📅 Filtrar por Data</label>
-                <select id="filter-date" onchange="filterDataMobile()" class="custom-select w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none appearance-none cursor-pointer transition-all">
-                    <option value="">Todos os Dias</option>
-                </select>
-            </div>
-
+        <!-- Filtros Secundários na Vertical -->
+        <section class="bg-white border-b border-stone-200/80 p-4 sticky top-[120px] z-40 shadow-sm flex flex-col gap-3">
             <!-- Filtro de Local -->
             <div class="relative">
                 <label for="filter-location" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📍 Filtrar por Local</label>
@@ -113,6 +116,7 @@
         const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/1R5nJqo9jHy5GR0DH3y19ogJd3gTz3VAm5AJ9tfKkNuM/gviz/tq?tqx=out:csv";
 
         let allShows = [];
+        let activeDateFilter = "";
 
         document.addEventListener("DOMContentLoaded", () => {
             Papa.parse(SHEETS_CSV_URL, {
@@ -165,7 +169,7 @@
             document.getElementById("loading").classList.add("hidden");
             document.getElementById("cards-container").classList.remove("hidden");
             
-            populateMobileDates(allShows);
+            buildMobileDateTabs(allShows);
             populateMobileLocations(allShows);
             filterDataMobile();
         }
@@ -176,18 +180,37 @@
             document.getElementById("empty-state").classList.remove("hidden");
         }
 
-        function populateMobileDates(data) {
+        function buildMobileDateTabs(data) {
             const dates = [...new Set(data.map(item => item["Data"]))].filter(Boolean).sort();
-            const select = document.getElementById("filter-date");
+            const container = document.getElementById("date-tabs");
             
-            // Limpa as opções anteriores exceto a primeira
-            select.innerHTML = '<option value="">📅 Todos os Dias</option>';
+            // Limpa exceto o primeiro botão (Todos os Dias)
+            container.innerHTML = `
+                <button onclick="selectDateTab('', this)" class="date-tab bg-white text-orange-900 text-xs font-bold px-4 py-2 rounded-full shadow-sm shrink-0 transition-all">
+                    📅 Todos os Dias
+                </button>
+            `;
             
             dates.forEach(d => {
                 const parts = d.split("-");
                 const labelFormatado = parts.length === 3 ? `${parts[2]}/${parts[1]}` : d;
-                select.innerHTML += `<option value="${d}">${labelFormatado}</option>`;
+                container.innerHTML += `
+                    <button onclick="selectDateTab('${d}', this)" class="date-tab bg-orange-950/40 text-orange-100 text-xs font-bold px-4 py-2 rounded-full shrink-0 transition-all">
+                        ${labelFormatado}
+                    </button>
+                `;
             });
+        }
+
+        function selectDateTab(dateStr, buttonEl) {
+            activeDateFilter = dateStr;
+            document.querySelectorAll('.date-tab').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-orange-900', 'shadow-sm');
+                btn.classList.add('bg-orange-950/40', 'text-orange-100');
+            });
+            buttonEl.classList.remove('bg-orange-950/40', 'text-orange-100');
+            buttonEl.classList.add('bg-white', 'text-orange-900', 'shadow-sm');
+            filterDataMobile();
         }
 
         function populateMobileLocations(data) {
@@ -203,12 +226,11 @@
         }
 
         function filterDataMobile() {
-            const selectedDate = document.getElementById("filter-date").value;
             const selectedLoc = document.getElementById("filter-location").value;
             const searchText = document.getElementById("search-band").value.toLowerCase();
 
             const filtered = allShows.filter(show => {
-                const matchDate = !selectedDate || show["Data"] === selectedDate;
+                const matchDate = !activeDateFilter || show["Data"] === activeDateFilter;
                 const matchLoc = !selectedLoc || show["Local"] === selectedLoc;
                 const matchSearch = !searchText || (show["Banda/Artista"] || "").toLowerCase().includes(searchText);
                 return matchDate && matchLoc && matchSearch;
