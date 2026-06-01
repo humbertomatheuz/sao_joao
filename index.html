@@ -47,14 +47,16 @@
             cursor: grabbing;
         }
     </style>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4516975332271687" crossorigin="anonymous"></script>
 </head>
 <body class="bg-stone-100 md:bg-stone-200/50 text-stone-900 min-h-screen flex justify-center antialiased">
 
     <!-- Container App Canvas (PC e Mobile) -->
-    <div class="w-full max-w-md bg-stone-50 flex flex-col min-h-screen md:min-h-[92vh] md:my-6 md:rounded-3xl md:shadow-2xl md:border md:border-stone-200 overflow-hidden">
+    <div class="w-full max-w-md md:max-w-4xl lg:max-w-5xl bg-stone-50 flex flex-col h-screen md:h-[92vh] md:my-6 md:rounded-3xl md:shadow-2xl md:border md:border-stone-200 overflow-hidden transition-all duration-300">
 
         <!-- Cabeçalho Fixo com Carrossel de Datas -->
-        <header class="sticky top-0 z-50 bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-md">
+        <header class="bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-md">
             <div class="px-4 py-4 flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-black tracking-tight flex items-center gap-1.5 drop-shadow-sm">
@@ -77,10 +79,10 @@
             </div>
         </header>
 
-        <!-- Filtros Secundários na Vertical -->
-        <section class="bg-white border-b border-stone-200/80 p-4 sticky top-[120px] z-40 shadow-sm flex flex-col gap-3">
+        <!-- Filtros Secundários na Vertical / Horizontal no Desktop -->
+        <section class="bg-white border-b border-stone-200/80 p-4 shadow-sm flex flex-col md:flex-row gap-3">
             <!-- Filtro de Local -->
-            <div class="relative">
+            <div class="relative flex-1">
                 <label for="filter-location" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📍 Filtrar por Local</label>
                 <select id="filter-location" onchange="filterDataMobile()" class="custom-select w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none appearance-none cursor-pointer transition-all">
                     <option value="">Todos os locais</option>
@@ -88,7 +90,7 @@
             </div>
 
             <!-- Busca de Banda -->
-            <div class="relative">
+            <div class="relative flex-1">
                 <label for="search-band" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">🔍 Buscar Artista / Banda</label>
                 <input type="text" id="search-band" oninput="filterDataMobile()" placeholder="Procurar banda ou artista..." 
                        class="w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-medium text-stone-700 placeholder-stone-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none transition-all">
@@ -98,14 +100,16 @@
         <!-- Conteúdo Principal -->
         <main class="flex-1 px-4 py-5 overflow-y-auto bg-stone-50/50">
             
+
+            
             <!-- Estado de Carregamento -->
             <div id="loading" class="text-center py-20 text-stone-400 font-medium">
                 <div class="animate-spin inline-block w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mb-3"></div>
-                <p class="text-xs tracking-wide">Sincronizando com o Google Sheets...</p>
+                <p class="text-xs tracking-wide">Carregando dados...</p>
             </div>
 
-            <!-- Lista de Cards -->
-            <div id="cards-container" class="hidden space-y-3.5 pb-8">
+            <!-- Lista de Cards (Feed de Conteúdo) -->
+            <div id="cards-container" class="hidden pb-8">
                 <!-- Inserido via JS -->
             </div>
 
@@ -113,32 +117,52 @@
             <div id="empty-state" class="hidden text-center py-20 px-4">
                 <span class="text-5xl animate-pulse inline-block mb-2">🌵</span>
                 <h3 class="text-sm font-bold text-stone-700">Nenhum show encontrado</h3>
-                <p class="text-xs text-stone-400 mt-1.5 max-w-[250px] mx-auto leading-relaxed">Tente alterar os filtros ou adicione shows na sua planilha.</p>
+                <p class="text-xs text-stone-400 mt-1.5 max-w-[250px] mx-auto leading-relaxed">Tente alterar os filtros ou adicione shows no banco de dados SQLite.</p>
             </div>
         </main>
+
+        <!-- Barra de Ações Inferior Fixa para Exportar -->
+        <div id="action-bar" class="bg-white border-t border-stone-200 p-4 shadow-lg flex justify-between items-center hidden">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-stone-600">
+                    <span id="selected-count" class="bg-orange-100 text-orange-800 text-xs font-black px-2.5 py-1 rounded-full mr-1">0</span> selecionados
+                </span>
+                <button onclick="clearSelection()" class="text-xs text-stone-400 hover:text-red-500 font-bold transition-colors">
+                    Limpar
+                </button>
+            </div>
+            <button onclick="exportSelectedShows()" class="bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all">
+                📥 Exportar JSON para Desktop
+            </button>
+        </div>
 
     </div>
 
     <script>
-        // Link CSV em tempo real gerado a partir da sua planilha pública
-        const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/1R5nJqo9jHy5GR0DH3y19ogJd3gTz3VAm5AJ9tfKkNuM/gviz/tq?tqx=out:csv";
-
         let allShows = [];
         let activeDateFilter = "";
 
         document.addEventListener("DOMContentLoaded", () => {
-            Papa.parse(SHEETS_CSV_URL, {
-                download: true,
-                header: false, // Lemos como array simples primeiro para ignorar as linhas de título decorativas
-                skipEmptyLines: true,
-                complete: (results) => {
-                    processRawData(results.data);
-                },
-                error: (err) => {
-                    console.error("Erro ao conectar com a planilha:", err);
+            // Consome dados diretamente do banco SQLite através da nossa API local
+            // Suporta abertura via http://localhost:8080 ou clique duplo direto no arquivo index.html (file://)
+            const apiUri = window.location.protocol === 'file:' 
+                ? 'http://localhost:8080/api/shows' 
+                : '/api/shows';
+
+            fetch(apiUri)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error("Erro na API de banco de dados:", data.error);
+                        showEmptyState();
+                        return;
+                    }
+                    processDatabaseData(data);
+                })
+                .catch(err => {
+                    console.error("Erro ao conectar com o banco SQLite:", err);
                     showEmptyState();
-                }
-            });
+                });
 
             // Implementação de arrastar carrossel com o mouse (Drag-to-Scroll)
             const slider = document.getElementById('date-tabs');
@@ -179,40 +203,9 @@
             }, true);
         });
 
-        // Limpa as linhas decorativas do topo da planilha e mapeia os dados corretamente
-        function processRawData(rawRows) {
-            if (!rawRows || rawRows.length < 4) {
-                showEmptyState();
-                return;
-            }
-
-            // Encontra a linha correta dos cabeçalhos (Banda/Artista, Local...)
-            // Na sua planilha atual ela está no índice 3 (quarta linha)
-            let headerIndex = rawRows.findIndex(row => row.join('').includes("Banda/Artista"));
-            
-            if (headerIndex === -1) {
-                showEmptyState();
-                return;
-            }
-
-            const headers = rawRows[headerIndex].map(h => {
-                const text = h.trim();
-                if (text.includes("Banda/Artista")) return "Banda/Artista";
-                if (text.includes("Local")) return "Local";
-                if (text.includes("Data")) return "Data";
-                if (text.includes("Horário")) return "Horário";
-                return text;
-            });
-            const dataRows = rawRows.slice(headerIndex + 1);
-
-            // Converte as linhas em objetos estruturados
-            allShows = dataRows.map(row => {
-                let obj = {};
-                headers.forEach((header, index) => {
-                    obj[header] = row[index] ? row[index].trim() : "";
-                });
-                return obj;
-            }).filter(show => show["Banda/Artista"]); // Ignora linhas em branco
+        // Processa os dados limpos recebidos da API SQLite
+        function processDatabaseData(data) {
+            allShows = data.filter(show => show["Banda/Artista"]);
 
             if (allShows.length === 0) {
                 showEmptyState();
@@ -292,6 +285,89 @@
             renderMobileCards(filtered);
         }
 
+        let selectedShows = {};
+
+        function toggleShowSelection(showId, banda, local, dataCard, originalData, checkboxEl) {
+            if (checkboxEl.checked) {
+                selectedShows[showId] = {
+                    "Banda/Artista": banda,
+                    "Local": local,
+                    "DataCard": dataCard,
+                    "DataOriginal": originalData
+                };
+            } else {
+                delete selectedShows[showId];
+            }
+            updateActionBar();
+        }
+
+        function updateActionBar() {
+            const keys = Object.keys(selectedShows);
+            const count = keys.length;
+            const actionBar = document.getElementById("action-bar");
+            const countBadge = document.getElementById("selected-count");
+            
+            if (countBadge) countBadge.innerText = count;
+            
+            if (actionBar) {
+                if (count > 0) {
+                    actionBar.classList.remove("hidden");
+                } else {
+                    actionBar.classList.add("hidden");
+                }
+            }
+        }
+
+        function clearSelection() {
+            selectedShows = {};
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            updateActionBar();
+        }
+
+        function exportSelectedShows() {
+            const showsArray = Object.values(selectedShows);
+            if (showsArray.length === 0) return;
+            
+            // Ordena os shows pela data original
+            showsArray.sort((a, b) => {
+                if (a.DataOriginal < b.DataOriginal) return -1;
+                if (a.DataOriginal > b.DataOriginal) return 1;
+                return 0;
+            });
+            
+            // Agrupa os shows por dia no formato desejado
+            const grouped = {};
+            showsArray.forEach(show => {
+                const key = `dia ${show.DataCard}`;
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push({
+                    "atração": show["Banda/Artista"],
+                    "local": show["Local"]
+                });
+            });
+            
+            try {
+                const jsonString = JSON.stringify(grouped, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'shows_selecionados.json';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Erro ao gerar JSON no front-end:", err);
+                alert("Erro ao exportar JSON.");
+            }
+        }
+
         function renderMobileCards(shows) {
             const container = document.getElementById("cards-container");
             const emptyState = document.getElementById("empty-state");
@@ -305,7 +381,9 @@
             }
             emptyState.classList.add("hidden");
 
-            shows.forEach(show => {
+            let currentHTML = '<ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">';
+            
+            shows.forEach((show, index) => {
                 const banda = show["Banda/Artista"];
                 const local = show["Local"] || "Local a definir";
                 const hora = show["Horário"];
@@ -322,8 +400,16 @@
                             </p>
                 ` : '';
 
-                container.innerHTML += `
-                    <div class="show-card bg-white rounded-2xl p-4 shadow-sm border border-stone-200/50 flex items-stretch justify-between gap-4">
+                const showId = encodeURIComponent(banda + '_' + local + '_' + dataCard);
+                const isChecked = selectedShows[showId] ? 'checked' : '';
+
+                currentHTML += `
+                    <li class="show-card bg-white rounded-2xl p-4 shadow-sm border border-stone-200/50 flex items-stretch justify-between gap-4">
+                        <!-- Checkbox de Seleção -->
+                        <div class="flex items-center justify-center shrink-0 pr-1">
+                            <input type="checkbox" onchange="toggleShowSelection('${showId}', '${banda.replace(/'/g, "\\'")}', '${local.replace(/'/g, "\\'")}', '${dataCard}', '${show["Data"] || ''}', this)" ${isChecked} class="w-4.5 h-4.5 rounded text-orange-600 focus:ring-orange-500 border-stone-300 transition-all cursor-pointer">
+                        </div>
+
                         <!-- Lado Esquerdo: Nome acima do Local -->
                         <div class="flex flex-col justify-center gap-1.5 items-start text-left min-w-0 flex-1">
                             <h2 class="text-base font-bold text-stone-900 leading-snug tracking-tight">${banda}</h2>
@@ -341,9 +427,54 @@
                                 📅 ${dataCard}
                             </span>
                         </div>
-                    </div>
+                    </li>
                 `;
+
+                // A cada 6 cards, fecha o grid, insere o anúncio e abre um novo grid
+                if ((index + 1) % 6 === 0 && index !== shows.length - 1) {
+                    currentHTML += `</ul>`;
+                    currentHTML += `
+                        <div class="my-4 flex justify-center w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-200/50 overflow-hidden min-h-[96px]">
+                            <ins class="adsbygoogle"
+                                 style="display:inline-block; width:100%; height:90px;"
+                                 data-ad-client="ca-pub-4516975332271687"
+                                 data-ad-slot="1302805548"
+                                 data-full-width-responsive="false"></ins>
+                        </div>
+                    `;
+                    currentHTML += `<ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">`;
+                    
+                    setTimeout(() => {
+                        try {
+                            (window.adsbygoogle = window.adsbygoogle || []).push({});
+                        } catch (e) {
+                            console.error("AdSense push error (mid-feed):", e);
+                        }
+                    }, 150);
+                }
             });
+
+            currentHTML += `</ul>`;
+
+            // Insere o anúncio final
+            currentHTML += `
+                <div class="mt-4 flex justify-center w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-200/50 overflow-hidden min-h-[96px]">
+                    <ins class="adsbygoogle"
+                         style="display:inline-block; width:100%; height:90px;"
+                         data-ad-client="ca-pub-4516975332271687"
+                         data-ad-slot="1302805548"
+                         data-full-width-responsive="false"></ins>
+                </div>
+            `;
+            setTimeout(() => {
+                try {
+                    (window.adsbygoogle = window.adsbygoogle || []).push({});
+                } catch (e) {
+                    console.error("AdSense push error (end-feed):", e);
+                }
+            }, 150);
+
+            container.innerHTML = currentHTML;
         }
     </script>
 </body>
