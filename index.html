@@ -38,6 +38,14 @@
             background-size: 1.25rem;
             padding-right: 2.5rem;
         }
+        #date-tabs {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #date-tabs:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
 <body class="bg-stone-100 md:bg-stone-200/50 text-stone-900 min-h-screen flex justify-center antialiased">
@@ -131,6 +139,44 @@
                     showEmptyState();
                 }
             });
+
+            // Implementação de arrastar carrossel com o mouse (Drag-to-Scroll)
+            const slider = document.getElementById('date-tabs');
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+            let moved = false;
+
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+                moved = false;
+            });
+            slider.addEventListener('mouseleave', () => {
+                isDown = false;
+            });
+            slider.addEventListener('mouseup', () => {
+                isDown = false;
+            });
+            slider.addEventListener('mousemove', (e) => {
+                if(!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 2; // Velocidade de scroll
+                if (Math.abs(x - startX) > 5) {
+                    moved = true;
+                }
+                slider.scrollLeft = scrollLeft - walk;
+            });
+
+            // Evita clique acidental nos botões do carrossel ao arrastar
+            slider.addEventListener('click', (e) => {
+                if (moved) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
         });
 
         // Limpa as linhas decorativas do topo da planilha e mapeia os dados corretamente
@@ -149,14 +195,21 @@
                 return;
             }
 
-            const headers = rawRows[headerIndex];
+            const headers = rawRows[headerIndex].map(h => {
+                const text = h.trim();
+                if (text.includes("Banda/Artista")) return "Banda/Artista";
+                if (text.includes("Local")) return "Local";
+                if (text.includes("Data")) return "Data";
+                if (text.includes("Horário")) return "Horário";
+                return text;
+            });
             const dataRows = rawRows.slice(headerIndex + 1);
 
             // Converte as linhas em objetos estruturados
             allShows = dataRows.map(row => {
                 let obj = {};
                 headers.forEach((header, index) => {
-                    obj[header.trim()] = row[index] ? row[index].trim() : "";
+                    obj[header] = row[index] ? row[index].trim() : "";
                 });
                 return obj;
             }).filter(show => show["Banda/Artista"]); // Ignora linhas em branco
@@ -255,7 +308,7 @@
             shows.forEach(show => {
                 const banda = show["Banda/Artista"];
                 const local = show["Local"] || "Local a definir";
-                const hora = show["Horário"] || "--:--";
+                const hora = show["Horário"];
 
                 let dataCard = "";
                 if(show["Data"]) {
@@ -263,21 +316,30 @@
                     dataCard = parts.length === 3 ? `${parts[2]}/${parts[1]}` : show["Data"];
                 }
 
-                container.innerHTML += `
-                    <div class="show-card bg-white rounded-2xl p-4.5 shadow-sm border border-stone-200/50 flex flex-col gap-3">
-                        <div class="flex justify-between items-start gap-2">
-                            <h2 class="text-base font-bold text-stone-900 leading-snug tracking-tight">${banda}</h2>
-                            <span class="bg-orange-50 text-orange-700 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border border-orange-100 shrink-0">
-                                📅 ${dataCard}
-                            </span>
-                        </div>
-                        <div class="flex flex-col gap-1.5 border-t border-stone-100 pt-2.5">
-                            <p class="text-xs text-stone-600 font-medium flex items-center gap-1.5">
-                                <span class="text-amber-500">📍</span> ${local}
-                            </p>
+                const horaHTML = hora ? `
                             <p class="text-xs text-stone-500 font-medium flex items-center gap-1.5">
                                 <span class="text-orange-500">🕒</span> ${hora}
                             </p>
+                ` : '';
+
+                container.innerHTML += `
+                    <div class="show-card bg-white rounded-2xl p-4 shadow-sm border border-stone-200/50 flex items-stretch justify-between gap-4">
+                        <!-- Lado Esquerdo: Nome acima do Local -->
+                        <div class="flex flex-col justify-center gap-1.5 items-start text-left min-w-0 flex-1">
+                            <h2 class="text-base font-bold text-stone-900 leading-snug tracking-tight">${banda}</h2>
+                            <div class="flex flex-col gap-1">
+                                <p class="text-xs text-stone-600 font-medium flex items-center gap-1">
+                                    <span class="text-amber-500">📍</span> ${local}
+                                </p>
+                                ${horaHTML}
+                            </div>
+                        </div>
+                        
+                        <!-- Lado Direito: Data ocupando a altura total e centralizada -->
+                        <div class="flex items-center justify-center shrink-0 pl-3 border-l border-stone-100">
+                            <span class="bg-orange-50 text-orange-700 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-orange-100/80 tracking-wide shrink-0">
+                                📅 ${dataCard}
+                            </span>
                         </div>
                     </div>
                 `;
