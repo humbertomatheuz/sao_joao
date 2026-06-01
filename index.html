@@ -46,6 +46,16 @@
         #date-tabs:active {
             cursor: grabbing;
         }
+        /* Esconde os cards de anúncios vazios ou bloqueados por padrão */
+        li:has(ins.adsbygoogle),
+        div:has(ins.adsbygoogle) {
+            display: none !important;
+        }
+        /* Mostra os cards de anúncios apenas se o AdSense os preencher com sucesso */
+        li:has(ins[data-ad-status="filled"]),
+        div:has(ins[data-ad-status="filled"]) {
+            display: flex !important;
+        }
     </style>
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4516975332271687" crossorigin="anonymous"></script>
