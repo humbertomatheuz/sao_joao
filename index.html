@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nosso São João 🌽</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse para ler o Google Sheets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        button, select, input { touch-action: manipulation; }
+        /* Micro-interactions & animations */
+        .show-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .show-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(234, 88, 12, 0.15);
+        }
+        .show-card:active {
+            transform: scale(0.98);
+        }
+        /* Custom styled select arrow */
+        .custom-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ea580c' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25rem;
+            padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 md:bg-stone-200/50 text-stone-900 min-h-screen flex justify-center antialiased">
+
+    <!-- Container App Canvas (PC e Mobile) -->
+    <div class="w-full max-w-md bg-stone-50 flex flex-col min-h-screen md:min-h-[92vh] md:my-6 md:rounded-3xl md:shadow-2xl md:border md:border-stone-200 overflow-hidden">
+
+        <!-- Cabeçalho Fixo -->
+        <header class="sticky top-0 z-50 bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-md px-4 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight flex items-center gap-1.5 drop-shadow-sm">
+                    🌽 Nosso São João 🔥
+                </h1>
+                <p class="text-xs text-amber-100 font-medium tracking-wide uppercase">Programação de Bolso</p>
+            </div>
+            <div id="badge-total" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300">
+                0 shows
+            </div>
+        </header>
+
+        <!-- Filtros na Vertical (Arranged stacked vertically) -->
+        <section class="bg-white border-b border-stone-200/80 p-4 sticky top-[72px] z-40 shadow-sm flex flex-col gap-3">
+            <!-- Filtro de Data -->
+            <div class="relative">
+                <label for="filter-date" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📅 Filtrar por Data</label>
+                <select id="filter-date" onchange="filterDataMobile()" class="custom-select w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none appearance-none cursor-pointer transition-all">
+                    <option value="">Todos os Dias</option>
+                </select>
+            </div>
+
+            <!-- Filtro de Local -->
+            <div class="relative">
+                <label for="filter-location" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📍 Filtrar por Local</label>
+                <select id="filter-location" onchange="filterDataMobile()" class="custom-select w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none appearance-none cursor-pointer transition-all">
+                    <option value="">Todos os locais</option>
+                </select>
+            </div>
+
+            <!-- Busca de Banda -->
+            <div class="relative">
+                <label for="search-band" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">🔍 Buscar Artista / Banda</label>
+                <input type="text" id="search-band" oninput="filterDataMobile()" placeholder="Procurar banda ou artista..." 
+                       class="w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-medium text-stone-700 placeholder-stone-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none transition-all">
+            </div>
+        </section>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 px-4 py-5 overflow-y-auto bg-stone-50/50">
+            
+            <!-- Estado de Carregamento -->
+            <div id="loading" class="text-center py-20 text-stone-400 font-medium">
+                <div class="animate-spin inline-block w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mb-3"></div>
+                <p class="text-xs tracking-wide">Sincronizando com o Google Sheets...</p>
+            </div>
+
+            <!-- Lista de Cards -->
+            <div id="cards-container" class="hidden space-y-3.5 pb-8">
+                <!-- Inserido via JS -->
+            </div>
+
+            <!-- Estado Vazio / Erro -->
+            <div id="empty-state" class="hidden text-center py-20 px-4">
+                <span class="text-5xl animate-pulse inline-block mb-2">🌵</span>
+                <h3 class="text-sm font-bold text-stone-700">Nenhum show encontrado</h3>
+                <p class="text-xs text-stone-400 mt-1.5 max-w-[250px] mx-auto leading-relaxed">Tente alterar os filtros ou adicione shows na sua planilha.</p>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        // Link CSV em tempo real gerado a partir da sua planilha pública
+        const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/1R5nJqo9jHy5GR0DH3y19ogJd3gTz3VAm5AJ9tfKkNuM/gviz/tq?tqx=out:csv";
+
+        let allShows = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            Papa.parse(SHEETS_CSV_URL, {
+                download: true,
+                header: false, // Lemos como array simples primeiro para ignorar as linhas de título decorativas
+                skipEmptyLines: true,
+                complete: (results) => {
+                    processRawData(results.data);
+                },
+                error: (err) => {
+                    console.error("Erro ao conectar com a planilha:", err);
+                    showEmptyState();
+                }
+            });
+        });
+
+        // Limpa as linhas decorativas do topo da planilha e mapeia os dados corretamente
+        function processRawData(rawRows) {
+            if (!rawRows || rawRows.length < 4) {
+                showEmptyState();
+                return;
+            }
+
+            // Encontra a linha correta dos cabeçalhos (Banda/Artista, Local...)
+            // Na sua planilha atual ela está no índice 3 (quarta linha)
+            let headerIndex = rawRows.findIndex(row => row.join('').includes("Banda/Artista"));
+            
+            if (headerIndex === -1) {
+                showEmptyState();
+                return;
+            }
+
+            const headers = rawRows[headerIndex];
+            const dataRows = rawRows.slice(headerIndex + 1);
+
+            // Converte as linhas em objetos estruturados
+            allShows = dataRows.map(row => {
+                let obj = {};
+                headers.forEach((header, index) => {
+                    obj[header.trim()] = row[index] ? row[index].trim() : "";
+                });
+                return obj;
+            }).filter(show => show["Banda/Artista"]); // Ignora linhas em branco
+
+            if (allShows.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            document.getElementById("loading").classList.add("hidden");
+            document.getElementById("cards-container").classList.remove("hidden");
+            
+            populateMobileDates(allShows);
+            populateMobileLocations(allShows);
+            filterDataMobile();
+        }
+
+        function showEmptyState() {
+            document.getElementById("loading").classList.add("hidden");
+            document.getElementById("cards-container").classList.add("hidden");
+            document.getElementById("empty-state").classList.remove("hidden");
+        }
+
+        function populateMobileDates(data) {
+            const dates = [...new Set(data.map(item => item["Data"]))].filter(Boolean).sort();
+            const select = document.getElementById("filter-date");
+            
+            // Limpa as opções anteriores exceto a primeira
+            select.innerHTML = '<option value="">📅 Todos os Dias</option>';
+            
+            dates.forEach(d => {
+                const parts = d.split("-");
+                const labelFormatado = parts.length === 3 ? `${parts[2]}/${parts[1]}` : d;
+                select.innerHTML += `<option value="${d}">${labelFormatado}</option>`;
+            });
+        }
+
+        function populateMobileLocations(data) {
+            const locations = [...new Set(data.map(item => item["Local"]))].filter(Boolean).sort();
+            const select = document.getElementById("filter-location");
+            
+            // Limpa as opções anteriores exceto a primeira
+            select.innerHTML = '<option value="">📍 Todos os locais</option>';
+            
+            locations.forEach(l => {
+                select.innerHTML += `<option value="${l}">${l}</option>`;
+            });
+        }
+
+        function filterDataMobile() {
+            const selectedDate = document.getElementById("filter-date").value;
+            const selectedLoc = document.getElementById("filter-location").value;
+            const searchText = document.getElementById("search-band").value.toLowerCase();
+
+            const filtered = allShows.filter(show => {
+                const matchDate = !selectedDate || show["Data"] === selectedDate;
+                const matchLoc = !selectedLoc || show["Local"] === selectedLoc;
+                const matchSearch = !searchText || (show["Banda/Artista"] || "").toLowerCase().includes(searchText);
+                return matchDate && matchLoc && matchSearch;
+            });
+
+            renderMobileCards(filtered);
+        }
+
+        function renderMobileCards(shows) {
+            const container = document.getElementById("cards-container");
+            const emptyState = document.getElementById("empty-state");
+            
+            container.innerHTML = "";
+            document.getElementById("badge-total").innerText = `${shows.length} show${shows.length !== 1 ? 's' : ''}`;
+
+            if (shows.length === 0) {
+                emptyState.classList.remove("hidden");
+                return;
+            }
+            emptyState.classList.add("hidden");
+
+            shows.forEach(show => {
+                const banda = show["Banda/Artista"];
+                const local = show["Local"] || "Local a definir";
+                const hora = show["Horário"] || "--:--";
+
+                let dataCard = "";
+                if(show["Data"]) {
+                    const parts = show["Data"].split("-");
+                    dataCard = parts.length === 3 ? `${parts[2]}/${parts[1]}` : show["Data"];
+                }
+
+                container.innerHTML += `
+                    <div class="show-card bg-white rounded-2xl p-4.5 shadow-sm border border-stone-200/50 flex flex-col gap-3">
+                        <div class="flex justify-between items-start gap-2">
+                            <h2 class="text-base font-bold text-stone-900 leading-snug tracking-tight">${banda}</h2>
+                            <span class="bg-orange-50 text-orange-700 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border border-orange-100 shrink-0">
+                                📅 ${dataCard}
+                            </span>
+                        </div>
+                        <div class="flex flex-col gap-1.5 border-t border-stone-100 pt-2.5">
+                            <p class="text-xs text-stone-600 font-medium flex items-center gap-1.5">
+                                <span class="text-amber-500">📍</span> ${local}
+                            </p>
+                            <p class="text-xs text-stone-500 font-medium flex items-center gap-1.5">
+                                <span class="text-orange-500">🕒</span> ${hora}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
