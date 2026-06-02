@@ -89,12 +89,22 @@
 
         <!-- Filtros Secundários na Vertical / Horizontal no Desktop -->
         <section class="bg-white border-b border-stone-200/80 p-4 shadow-sm flex flex-col md:flex-row gap-3">
-            <!-- Filtro de Local -->
-            <div class="relative flex-1">
-                <label for="filter-location" class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📍 Filtrar por Local</label>
-                <select id="filter-location" onchange="filterDataMobile()" class="custom-select w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none appearance-none cursor-pointer transition-all">
-                    <option value="">Todos os locais</option>
-                </select>
+            <!-- Filtro de Local (Multiselect) -->
+            <div class="relative flex-1" id="multiselect-location-container">
+                <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">📍 Filtrar por Local</label>
+                <button onclick="toggleLocationDropdown(event)" id="multiselect-location-btn" class="w-full bg-stone-50 border border-stone-200/70 rounded-xl p-2.5 text-xs font-semibold text-stone-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white focus:outline-none transition-all flex justify-between items-center text-left cursor-pointer">
+                    <span id="multiselect-location-label" class="truncate font-semibold">Carregando locais...</span>
+                    <span class="text-orange-500 shrink-0 ml-2">▼</span>
+                </button>
+                <div id="multiselect-location-menu" class="hidden absolute left-0 right-0 mt-1.5 bg-white border border-stone-200/90 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-3 flex flex-col gap-2 transition-all">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-2 mb-1">
+                        <button onclick="selectAllLocations(event)" class="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer">Selecionar Todos</button>
+                        <button onclick="clearAllLocations(event)" class="text-[10px] text-stone-400 font-bold hover:underline cursor-pointer">Limpar</button>
+                    </div>
+                    <div id="multiselect-location-options" class="flex flex-col gap-1.5">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </div>
             </div>
 
             <!-- Busca de Banda -->
@@ -267,25 +277,97 @@
             filterDataMobile();
         }
 
+        let selectedLocations = new Set();
+
         function populateMobileLocations(data) {
             const locations = [...new Set(data.map(item => item["Local"]))].filter(Boolean).sort();
-            const select = document.getElementById("filter-location");
+            const optionsContainer = document.getElementById("multiselect-location-options");
             
-            // Limpa as opções anteriores exceto a primeira
-            select.innerHTML = '<option value="">📍 Todos os locais</option>';
+            optionsContainer.innerHTML = "";
+            selectedLocations = new Set(locations); // Seleciona todos por padrão no início
             
-            locations.forEach(l => {
-                select.innerHTML += `<option value="${l}">${l}</option>`;
+            locations.forEach(loc => {
+                const isChecked = selectedLocations.has(loc) ? 'checked' : '';
+                optionsContainer.innerHTML += `
+                    <label class="flex items-center gap-2.5 px-2 py-1.5 hover:bg-stone-50 rounded-lg cursor-pointer transition-colors text-xs text-stone-700 font-medium select-none">
+                        <input type="checkbox" value="${loc}" onchange="toggleLocationOption(this)" ${isChecked} class="location-checkbox w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-stone-300 transition-all cursor-pointer">
+                        <span class="truncate">${loc}</span>
+                    </label>
+                `;
             });
+            updateLocationLabel();
         }
 
+        function toggleLocationDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById("multiselect-location-menu");
+            menu.classList.toggle("hidden");
+        }
+
+        function toggleLocationOption(checkboxEl) {
+            const loc = checkboxEl.value;
+            if (checkboxEl.checked) {
+                selectedLocations.add(loc);
+            } else {
+                selectedLocations.delete(loc);
+            }
+            updateLocationLabel();
+            filterDataMobile();
+        }
+
+        function updateLocationLabel() {
+            const label = document.getElementById("multiselect-location-label");
+            const total = document.querySelectorAll('.location-checkbox').length;
+            const selectedCount = selectedLocations.size;
+            
+            if (selectedCount === 0) {
+                label.innerText = "Nenhum local selecionado";
+            } else if (selectedCount === total) {
+                label.innerText = "Todos os locais";
+            } else {
+                label.innerText = `${selectedCount} local${selectedCount !== 1 ? 'is' : ''} selecionado${selectedCount !== 1 ? 's' : ''}`;
+            }
+        }
+
+        function selectAllLocations(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const checkboxes = document.querySelectorAll('.location-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                selectedLocations.add(cb.value);
+            });
+            updateLocationLabel();
+            filterDataMobile();
+        }
+
+        function clearAllLocations(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const checkboxes = document.querySelectorAll('.location-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                selectedLocations.delete(cb.value);
+            });
+            updateLocationLabel();
+            filterDataMobile();
+        }
+
+        // Fecha o dropdown se clicar fora do container
+        document.addEventListener("click", (e) => {
+            const container = document.getElementById("multiselect-location-container");
+            const menu = document.getElementById("multiselect-location-menu");
+            if (container && !container.contains(e.target) && menu) {
+                menu.classList.add("hidden");
+            }
+        });
+
         function filterDataMobile() {
-            const selectedLoc = document.getElementById("filter-location").value;
             const searchText = document.getElementById("search-band").value.toLowerCase();
 
             const filtered = allShows.filter(show => {
                 const matchDate = !activeDateFilter || show["Data"] === activeDateFilter;
-                const matchLoc = !selectedLoc || show["Local"] === selectedLoc;
+                const matchLoc = selectedLocations.has(show["Local"]);
                 const matchSearch = !searchText || (show["Banda/Artista"] || "").toLowerCase().includes(searchText);
                 return matchDate && matchLoc && matchSearch;
             });
