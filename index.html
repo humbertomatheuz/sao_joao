@@ -325,7 +325,7 @@
             } else if (selectedCount === total) {
                 label.innerText = "Todos os locais";
             } else {
-                label.innerText = `${selectedCount} local${selectedCount !== 1 ? 'is' : ''} selecionado${selectedCount !== 1 ? 's' : ''}`;
+                label.innerText = `${selectedCount} ${selectedCount === 1 ? 'local selecionado' : 'locais selecionados'}`;
             }
         }
 
