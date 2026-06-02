@@ -140,7 +140,7 @@
                 </button>
             </div>
             <button onclick="exportSelectedShows()" class="bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all">
-                📥 Exportar JSON para Desktop
+                📋 Copiar JSON
             </button>
         </div>
 
@@ -360,16 +360,14 @@
             
             try {
                 const jsonString = JSON.stringify(grouped, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'shows_selecionados.json';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                navigator.clipboard.writeText(jsonString)
+                    .then(() => {
+                        alert("Sucesso! JSON copiado para a área de transferência.");
+                    })
+                    .catch(err => {
+                        console.error("Erro ao copiar para clipboard:", err);
+                        alert("Erro ao copiar JSON. Verifique as permissões do seu navegador.");
+                    });
             } catch (err) {
                 console.error("Erro ao gerar JSON no front-end:", err);
                 alert("Erro ao exportar JSON.");
